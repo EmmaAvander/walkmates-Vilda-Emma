@@ -31,7 +31,6 @@ Here are the three WalkMates features that we picked, and for each feature two I
 >   - Minimum top-up: 10.00 SEK (a top-up of less than 10.00 is rejected).
 >   - Maximum single top-up: 5 000.00 SEK.
 >   - Maximum resulting balance: 20 000.00 SEK (a top-up that would exceed this is rejected).
->
 > - The balance MUST never go negative. A booking that costs more than the current balance is rejected (see FR-4.3).
 > - Amounts are handled to 2 decimal places; round half-up.
 
@@ -58,3 +57,46 @@ Here are the three WalkMates features that we picked, and for each feature two I
 **ISO/IEC 25010 quality characteristics: 3.6.5 authenticity** capability of a product to prove that the identity of a subject or resource is the one claimed
 
 **Why is this quality characteristic relevant?** The system must verify the personnummer so that it belongs to the actual person.
+
+<br>
+
+> **We chose the FR-1.4 feature and wrote this testable quality requirement;**
+>
+> > _“To ensure Authenticity, the system must reject 100% of identity verification attempts where the provided personnummer has the correct YYMMDD-NNNN format but fails the Luhn checksum, ensuring the Seeker is not promoted to VERIFIED.”_
+
+<br>
+
+## Activity 1.2 — Bug analysis (error → fault → failure)
+
+### 1. Trace the chain
+
+**Human error:** The programmer could have misunderstood what counts as an active booking and for example is only counting CONFIRMED and IN_PROGRESS as active, while REQUESTED is not. Or be thinking that the only difference between NEW and VERIFIED is the actual verification, not that it changes the amount of possible active bookings at once.
+
+**Fault in the code:** The code could be missing the check (like an if statement or something) that should be preventing a NEW seeker to add another booking if there is already one active.
+
+**Failure in UI:** The fact that the second booking was possible to do is the actual failure that the user saw.
+
+### 2. Find the responsible code
+
+The responsible code is located in the BookingService.java file on line 71. The code line is missing a "=" after the ">", so it should be ">=", indicating that the amount of active bookings for this seeker is "greater than, or equal to" the maximum amount of bookings that is allowed. Currently the code is only blocking another booking once the seeker has reached more than the maximum bookings. It should be blocked once they reach the maximum.
+
+### 3. Which test level should have caught this, which technique?
+
+Since the rule is precise and isolated this should’ve been caught by a unit test. And since this is a comparison mistake, occurring at the edges of ranges, a Boundary Value Analysis (BVA) is the preferred technique.  
+_A specification-based test should have caught this since the requirements clearly states the rules and limits for active bookings per tier._
+
+<br>
+
+## Activity 1.3 — Your first test (day-one win)
+
+FIRST_TEST_TUTORIAL.md : Completed and confirmed green.
+
+<br>
+
+# Part B — Specification-based design (M2)
+
+## Activity 2.1 — Equivalence Partitioning
+
+| Partition | Input | Representative | Expected Outcome |
+| --------- | ----- | -------------- | ---------------- |
+| Test      | Test  | Test           | Test             |
