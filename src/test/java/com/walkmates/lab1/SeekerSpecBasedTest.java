@@ -129,10 +129,89 @@ void invalidEmailLengthIsRejectedMethod() {
     }
 
  
+    // (BVA): just-below / at / just-above the 10.00 minimum top-up (FR-1.3).
 
+    //Minimum top-up
+    @Test
+    @DisplayName("Top-up just below minimum (9.99) is rejected")
+    void topUpBelowMinimumIsRejected(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        assertThrows(IllegalArgumentException.class, () -> seeker.addFunds(9.99));
+    }
+    @Test
+    @DisplayName("Top-up exactly at minimum (10.00) is accepted")
+    void topUpAtMinimumIsAccepted(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        seeker.addFunds(10.00);
+        assertThat(seeker.getBalance()).isEqualTo(10.00);
+    }
+    @Test
+    @DisplayName("Top-up just over minimum (10.00) is accepted")
+    void topUpOverMinimumIsAccepted(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        seeker.addFunds(10.01);
+        assertThat(seeker.getBalance()).isEqualTo(10.01);
+    }
 
-    // TODO (BVA): just-below / at / just-above the 10.00 minimum top-up (FR-1.3).
-    // TODO (BVA): a top-up that would push the balance above 20000.00 is rejected (FR-1.3).
+     //Single transaction maximum
+    @Test
+    @DisplayName("Top-up just below single-transaction maximum (4999.99) is accepted")
+    void topUpBelowSingleMaxIsAccepted(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        seeker.addFunds(4999.99);
+        assertThat(seeker.getBalance()).isEqualTo(4999.99);
+    }
+    //Wanted to try manually input amount instead of the instance variable test higher up
+    @Test
+    @DisplayName("Top-up exactly at the single-transaction maximum (5000.00) is accepted")
+    void topUpExactlyAtSingleMaxIsAccepted(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        seeker.addFunds(5000.00);
+        assertThat(seeker.getBalance()).isEqualTo(5000.00);
+    }
+    @Test
+    @DisplayName("Top-up just above the single-transaction maximum (5000.01) is rejected")
+    void topUpJustAboveSingleMaxIsRejected(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        assertThrows(IllegalArgumentException.class, () -> seeker.addFunds(5000.01));
+    }
+
+     //Maximum balance
+    @Test
+    @DisplayName("Top-up just below maximum amount balance is accepted")
+    void topUpJustBelowMaxAmountBalanceIsAccepted(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        for(int i = 0; i < 3; i++){
+            seeker.addFunds(5000.00);
+        }
+        seeker.addFunds(4999.99);
+        assertThat(seeker.getBalance()).isEqualTo(19999.99);
+    }
+    @Test
+    @DisplayName("Top-up at maximum amount balance is accepted")
+    void topUpAtMaxAmountBalanceIsAccepted(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        for(int i = 0; i < 4; i++){
+            seeker.addFunds(5000.00);
+        }
+       
+        assertThat(seeker.getBalance()).isEqualTo(20000.00);
+    }
+
+    // (BVA): a top-up that would push the balance above 20000.00 is rejected (FR-1.3).
+
+    @Test
+    @DisplayName("Top-up just above maximum amount balance is rejected")
+    void topUpJustAboveMaxAmountBalanceIsRejected(){
+        Seeker seeker = new Seeker("Katten.jansson@gmail.com", "katarinaj", "0739587614");
+        for(int i = 0; i < 3; i++){
+            seeker.addFunds(5000.00);
+        }
+        seeker.addFunds(4991.00);
+        assertThrows(IllegalArgumentException.class, () -> seeker.addFunds(10.01));
+        //Making sure the test throws an exception due to not allowed max balance, and not a faulty top-up (less than 10.00kr)
+    }
+
     // TODO (Decision table): expected fee + max-bookings for each trust tier (FR-1.2).
     
 
