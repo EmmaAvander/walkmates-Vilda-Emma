@@ -1,6 +1,8 @@
 package com.walkmates.lab1;
 
 import com.walkmates.model.Seeker;
+import com.walkmates.model.TrustTier;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -212,7 +214,61 @@ void invalidEmailLengthIsRejectedMethod() {
         //Making sure the test throws an exception due to not allowed max balance, and not a faulty top-up (less than 10.00kr)
     }
 
-    // TODO (Decision table): expected fee + max-bookings for each trust tier (FR-1.2).
+    // Decision table: expected fee + max-bookings for each trust tier (FR-1.2).
     
+    @Test
+@DisplayName("NEW trust tier has max 1 booking and 15% platform fee")
+void newTierHasCorrectLimits() {
+    Seeker seeker = new Seeker(
+        "sam@example.com",
+        "Sam",
+        "0707654321");
+
+    assertThat(seeker.getMaxConcurrentBookings()).isEqualTo(1);
+    assertThat(seeker.getTrustTier().getPlatformFee()).isEqualTo(0.15);
+}
+
+ @Test
+@DisplayName("VERIFIED trust tier has max 3 bookings and 12% platform fee")
+void verifiedTierHasCorrectLimits() {
+    Seeker seeker = new Seeker(
+        "sam@example.com",
+        "Sam",
+        "0707654321");
+
+        seeker.setTrustTier(TrustTier.VERIFIED);
+
+    assertThat(seeker.getMaxConcurrentBookings()).isEqualTo(3);
+    assertThat(seeker.getTrustTier().getPlatformFee()).isEqualTo(0.12);
+}
+
+ @Test
+@DisplayName("TRUSTED trust tier has max 5 bookings and 8% platform fee")
+void trustedTierHasCorrectLimits() {
+    Seeker seeker = new Seeker(
+        "sam@example.com",
+        "Sam",
+        "0707654321");
+
+        seeker.setTrustTier(TrustTier.TRUSTED);
+
+    assertThat(seeker.getMaxConcurrentBookings()).isEqualTo(5);
+    assertThat(seeker.getTrustTier().getPlatformFee()).isEqualTo(0.08);
+}
+
+ @Test
+@DisplayName("PRO_SITTER trust tier has max 10 bookings and 5% platform fee")
+void proSitterTierHasCorrectLimits() {
+    Seeker seeker = new Seeker(
+        "sam@example.com",
+        "Sam",
+        "0707654321");
+
+        seeker.setTrustTier(TrustTier.PRO_SITTER);
+
+    assertThat(seeker.getMaxConcurrentBookings()).isEqualTo(10);
+    assertThat(seeker.getTrustTier().getPlatformFee()).isEqualTo(0.05);
+}
+
 
 }
