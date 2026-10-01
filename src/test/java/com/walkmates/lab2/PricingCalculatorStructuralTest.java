@@ -1,15 +1,17 @@
 package com.walkmates.lab2;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import com.walkmates.model.Booking;
 import com.walkmates.model.Listing;
 import com.walkmates.model.ListingType;
 import com.walkmates.model.Seeker;
 import com.walkmates.model.TrustTier;
 import com.walkmates.service.PricingCalculator;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Lab 2, Part A — structural testing for {@link PricingCalculator} (FR-4.3).
@@ -44,8 +46,61 @@ class PricingCalculatorStructuralTest {
         assertThat(price).isEqualTo(89.60);
     }
 
+    // @Test
+    // @DisplayName("Null as parameter throws IllegalArgumentException")
+    // void nullInputsThrowException() {
+    //     Booking validBooking = new Booking("seeker-1", "listing-1", 60);
+    //     Listing validListing = listing(ListingType.DOG_WALK);
+    //     Seeker validSeeker = seeker(TrustTier.VERIFIED);
+ 
+    //     // 1. Testing when booking is null
+    //     assertThrows(IllegalArgumentException.class,
+    //             () -> pricing.priceFor(null, validListing, validSeeker));
+       
+    //     // 2. Testing when listing is null
+    //     assertThrows(IllegalArgumentException.class,
+    //             () -> pricing.priceFor(validBooking, null, validSeeker));
+       
+    //     // 3. Testing when seeker is null
+    //     assertThrows(IllegalArgumentException.class,
+    //             () -> pricing.priceFor(validBooking, validListing, null));
+    // }
+
     // TODO (branch): a free SHELTER_VOLUNTEER listing always costs 0.00.
+    @Test 
+    @DisplayName ("a free SHELTER_VOLUNTEER listing costs 0.00")
+    void shelterVolunteerPrice(){
+        Booking booking = new Booking("seeker-1", "listing-1", 60);
+
+        double price = pricing.priceFor(booking, listing(ListingType.SHELTER_VOLUNTEER), seeker(TrustTier.VERIFIED));
+
+        assertThat(price).isEqualTo(0.00);
+    }
+
+
     // TODO (branch): a clearly-overnight booking (e.g. 600 min) includes the 20% surcharge.
+    @Test 
+    @DisplayName ("a clearly-overnight booking (600 min) includes the 20% surcharge")
+    void overnightSurchargeAddedInPrice(){
+        Booking booking = new Booking("seeker-1", "listing-1", 600);
+        //
+
+        double price = pricing.priceFor(booking, listing(ListingType.PET_SITTING), seeker(TrustTier.VERIFIED));
+
+        assertThat(price).isEqualTo(1612.80);
+    }
+
+
     // TODO (BOUNDARY — this is the interesting one): a booking of exactly 480 minutes must NOT
     //      be surcharged (FR-4.3 says strictly > 480). Write this test and see what happens.
+    @Test 
+    @DisplayName ("a booking of exactly 480 minutes should not be surcharged")
+    void exactly480MinutesDoesNotIncludeOvernightSurcharge(){
+        Booking booking = new Booking("seeker-1", "listing-1", 480);
+        //
+
+        double price = pricing.priceFor(booking, listing(ListingType.PET_SITTING), seeker(TrustTier.VERIFIED));
+
+        assertThat(price).isEqualTo(1075.20);
+    }
 }
