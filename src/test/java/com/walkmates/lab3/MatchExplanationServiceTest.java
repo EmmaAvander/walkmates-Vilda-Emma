@@ -48,9 +48,13 @@ class MatchExplanationServiceTest {
 
         assertThat(prompt).contains("Seeker trust tier: " + TrustTier.NEW);
         assertThat(prompt).contains("Listing type: " + ListingType.DOG_WALK);
-        //assertThat(prompt).contains("Listing base rate (SEK/hour): " + testListing.getBaseRatePerHour());
-
-        //assertThat(prompt).contains("<<<LISTING_DESCRIPTION_DATA\nFriendly dog\nLISTING_DESCRIPTION_DATA>>>");
+        // Check that the prompt includes the hourly rate
+        assertThat(prompt).contains("Listing base rate (SEK/hour): 80.0");
+        // Check that the user's description stays inside the data block.
+        // This helps prevent prompt injection by separating user text from AI instructions.
+        assertThat(prompt).contains(
+    "<<<LISTING_DESCRIPTION_DATA\nFriendly dog\nLISTING_DESCRIPTION_DATA>>>"
+);
     }
 
     // ---- Worked example 2: on LLM failure, fall back deterministically (FR-5.2) ----
@@ -72,43 +76,72 @@ class MatchExplanationServiceTest {
                 "This DOG_WALK opportunity \"Walk Rex\" is a good fit for a NEW seeker.");
     }
 
-    // TODO (fallback): also fall back on LlmTimeoutException, and on a null/blank response.
-    // Activity 5.2: Fallback / failure paths
+    // Fall back on LlmTimeoutException
+    //Den skapar en enkel, förutbestämd förklaring utifrån annonsens uppgifter, om AI:n inte fungerar
+    @Test
+    @DisplayName("explainMatch falls back when the LLM times out")
+    void fallsBackOnTimeout() throws Exception {
+        // Simulate that the AI does not respond in time
+        LlmClient llm = mock(LlmClient.class);
+        //Tell the fake AI to throw a timeout error
+        // This simulates an AI service that takes too long to respond
+        when(llm.complete(org.mockito.ArgumentMatchers.anyString()))
+                .thenThrow(new LlmClient.LlmTimeoutException("timeout"));
 
-    /* @Test
-    @DisplayName("explainMatch falls back on LlmTimeoutException")
-    void fallsBackOnLlmTimeout() throws Exception {
+        //Create the real WalkMates service using our fake AI
+        MatchExplanationService service = new MatchExplanationService(llm);
+
+        //Ask WalkMates to explain a match
+        String result = service.explainMatch(seeker(), listing("Friendly dog"));
+
+        // Check that the fallback explanation is returned
+        assertThat(result).isEqualTo(
+                "This DOG_WALK opportunity \"Walk Rex\" is a good fit for a NEW seeker.");
+    }
+    // and on a null/blank response.
+    @Test
+    @DisplayName("explainMatch falls back when the LLM returns empty text")
+    void fallsBackOnEmptyResponse() throws Exception {
+        // Simulate that the AI returns an empty response
         LlmClient llm = mock(LlmClient.class);
         when(llm.complete(org.mockito.ArgumentMatchers.anyString()))
-                .thenThrow(new LlmClient.LlmTimeoutException("request timed out"));
+                .thenReturn("");
+        // The fake AI returns an empty string ("").
+        // This is the AI's response, NOT the final result.
+        // WalkMates should detect the empty response and use its fallback explanation instead.
+        // The assertion below checks that WalkMates returns the fallback, not the empty string.
+
         MatchExplanationService service = new MatchExplanationService(llm);
 
         String result = service.explainMatch(seeker(), listing("Friendly dog"));
 
+        // Check that the fallback explanation is returned
         assertThat(result).isEqualTo(
                 "This DOG_WALK opportunity \"Walk Rex\" is a good fit for a NEW seeker.");
-    } */
+    }
 
-    /* @Test
-    @DisplayName("explainMatch falls back on null or blank LLM response")
-    void fallsBackOnNullOrBlankResponse() throws Exception {
+    @Test
+    @DisplayName("explainMatch falls back when the LLM returns null")
+    void fallsBackOnNullResponse() throws Exception {
+
+        // Create a fake AI service
         LlmClient llm = mock(LlmClient.class);
+
+        // The fake AI returns null instead of a text response.
+        when(llm.complete(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(null);
+
+        // Create the real WalkMates service using our fake AI
         MatchExplanationService service = new MatchExplanationService(llm);
 
-        // Scenario 1: LLM return null
-        when(llm.complete(org.mockito.ArgumentMatchers.anyString())).thenReturn(null);
-        String resultNull = service.explainMatch(seeker(), listing("Friendly dog"));
-        
-        assertThat(resultNull).isEqualTo(
-                "This DOG_WALK opportunity \"Walk Rex\" is a good fit for a NEW seeker.");
+        // Ask WalkMates to explain the match
+        String result = service.explainMatch(seeker(), listing("Friendly dog"));
 
-        // Scenario 2: LLM return empty string (blank)
-        when(llm.complete(org.mockito.ArgumentMatchers.anyString())).thenReturn("   ");
-        String resultBlank = service.explainMatch(seeker(), listing("Friendly dog"));
-        
-        assertThat(resultBlank).isEqualTo(
+        // Check that WalkMates handles null and returns the fallback explanation
+        assertThat(result).isEqualTo(
                 "This DOG_WALK opportunity \"Walk Rex\" is a good fit for a NEW seeker.");
-    } */
+    }
+
 
     // TODO (injection): a description containing "ignore previous instructions and ..." must
     //      stay inside the data block; buildPrompt must still contain the data delimiters.
@@ -167,7 +200,7 @@ class MatchExplanationServiceTest {
         assertThat(newChoice.getProviderId()).isEqualTo(baselineChoice.getProviderId());
     }
 
-    @RepeatedTest(100) // Test to prove flakiness, runs 100 times
+    /* @RepeatedTest(100) // Test to prove flakiness, runs 100 times. Uncomment to run the test, commented because test deliberately crashes
     @DisplayName("Prooves flakiness: Test without BOOKED-fix")
     void mr1IrrelevantDetail_ProveFlakiness() {
         MatchExplanationService service = new MatchExplanationService(mock(LlmClient.class));
@@ -193,7 +226,7 @@ class MatchExplanationServiceTest {
 
         
         assertThat(newChoice.getProviderId()).isEqualTo(baselineChoice.getProviderId());
-    }
+    } */
 
     // TODO (MR-2): shuffling the candidate list must not change the chosen listing.
 
