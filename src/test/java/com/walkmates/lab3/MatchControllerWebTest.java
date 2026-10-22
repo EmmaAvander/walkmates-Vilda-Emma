@@ -1,5 +1,8 @@
 package com.walkmates.lab3;
 
+import com.walkmates.model.Listing;
+import com.walkmates.model.ListingType;
+import com.walkmates.model.Seeker;
 import com.walkmates.repository.ListingRepository;
 import com.walkmates.repository.SeekerRepository;
 import com.walkmates.service.ai.MatchExplanationService;
@@ -16,6 +19,7 @@ import java.util.Optional;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /**
  * Lab 3, Part A (interface rung) — testing the AI feature through its HTTP boundary with
@@ -47,6 +51,59 @@ class MatchControllerWebTest {
     }
 
     // TODO: stub a seeker + listing and a canned explanation, assert 200 + JSON body.
+
+    @Test
+    @DisplayName("GET explain returns 200 and JSON body on success")
+    void explainReturns200AndJsonOnSuccess() throws Exception {
+        // Create dummy-objects
+        Seeker seeker = new Seeker("p@example.com", "Pat", "0701112233");
+        Listing listing = new Listing("provider-1", "Walk Rex", "Dog", ListingType.DOG_WALK);
+
+        // Mock behaviour. If controller is searching for "s1" & "l1", return our objects
+        when(seekers.findById("s1")).thenReturn(Optional.of(seeker));
+        when(listings.findById("l1")).thenReturn(Optional.of(listing));
+        // Pretend that the AI-service returns a specific string
+        when(matchExplanation.explainMatch(seeker, listing)).thenReturn("This is a mocked AI explanation.");
+
+        // Do HTTP-call & verify (200 OK + correct JSON-path)
+        mvc.perform(get("/api/match/s1/explain").param("listingId", "l1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.seekerId").value("s1"))
+                .andExpect(jsonPath("$.listingId").value("l1"))
+                .andExpect(jsonPath("$.explanation").value("This is a mocked AI explanation."));
+    }
+
     // OPTIONAL EXTENSION: make the mocked service return the fallback text and assert the
     // endpoint still returns 200; also cover the listing-missing 404 path separately.
+
+    @Test
+    @DisplayName("GET explain returns 404 when the listing does not exist")
+    void explainReturns404WhenListingMissing() throws Exception {
+        Seeker seeker = new Seeker("p@example.com", "Pat", "0701112233");
+        
+        when(seekers.findById("s1")).thenReturn(Optional.of(seeker));
+        when(listings.findById("missing_listing")).thenReturn(Optional.empty());
+
+        mvc.perform(get("/api/match/s1/explain").param("listingId", "missing_listing"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET explain returns 200 even when fallback text is returned by the service")
+    void explainReturns200WithFallbackText() throws Exception {
+        Seeker seeker = new Seeker("p@example.com", "Pat", "0701112233");
+        Listing listing = new Listing("provider-1", "Walk Rex", "Dog", ListingType.DOG_WALK);
+
+        when(seekers.findById("s1")).thenReturn(Optional.of(seeker));
+        when(listings.findById("l1")).thenReturn(Optional.of(listing));
+        
+        // Mock that the service sends background fallback
+        String fallbackText = "This DOG_WALK opportunity \"Walk Rex\" is a good fit for a NEW seeker.";
+        when(matchExplanation.explainMatch(seeker, listing)).thenReturn(fallbackText);
+
+        mvc.perform(get("/api/match/s1/explain").param("listingId", "l1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.explanation").value(fallbackText));
+    }
+
 }
